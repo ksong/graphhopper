@@ -21,8 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
-import java.util.Locale;
 
 /**
  * @author Peter Karich
@@ -94,7 +92,7 @@ public abstract class MiniPerfTest {
     }
 
     public String nf(Number num) {
-        return new DecimalFormat("#.###", DecimalFormatSymbols.getInstance(Locale.ROOT)).format(num);
+        return new DecimalFormat("#.###").format(num);
     }
 
     /**

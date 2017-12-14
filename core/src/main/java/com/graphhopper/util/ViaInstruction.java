@@ -31,7 +31,6 @@ public class ViaInstruction extends Instruction {
         this(instr.getName(), instr.getAnnotation(), instr.getPoints());
         setDistance(instr.getDistance());
         setTime(instr.getTime());
-        this.extraInfo = instr.extraInfo;
     }
 
     @Override

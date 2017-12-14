@@ -21,8 +21,6 @@ import java.io.*;
 import java.util.*;
 import java.util.Map.Entry;
 
-import static com.graphhopper.util.Helper.*;
-
 /**
  * A class which manages the translations in-memory. See here for more information:
  * ./docs/core/translations.md
@@ -40,7 +38,7 @@ public class TranslationMap {
     private final Map<String, Translation> translations = new HashMap<String, Translation>();
 
     public static int countOccurence(String phrase, String splitter) {
-        if (isEmpty(phrase))
+        if (Helper.isEmpty(phrase))
             return 0;
         return phrase.trim().split(splitter).length;
     }
@@ -51,7 +49,7 @@ public class TranslationMap {
     public TranslationMap doImport(File folder) {
         try {
             for (String locale : LOCALES) {
-                TranslationHashMap trMap = new TranslationHashMap(getLocale(locale));
+                TranslationHashMap trMap = new TranslationHashMap(Helper.getLocale(locale));
                 trMap.doImport(new FileInputStream(new File(folder, locale + ".txt")));
                 add(trMap);
             }
@@ -68,7 +66,7 @@ public class TranslationMap {
     public TranslationMap doImport() {
         try {
             for (String locale : LOCALES) {
-                TranslationHashMap trMap = new TranslationHashMap(getLocale(locale));
+                TranslationHashMap trMap = new TranslationHashMap(Helper.getLocale(locale));
                 trMap.doImport(TranslationMap.class.getResourceAsStream(locale + ".txt"));
                 add(trMap);
             }
@@ -131,7 +129,7 @@ public class TranslationMap {
             Map<String, String> trMap = tr.asMap();
             for (Entry<String, String> enEntry : enMap.entrySet()) {
                 String value = trMap.get(enEntry.getKey());
-                if (isEmpty(value)) {
+                if (Helper.isEmpty(value)) {
                     trMap.put(enEntry.getKey(), enEntry.getValue());
                     continue;
                 }
@@ -146,7 +144,7 @@ public class TranslationMap {
                     Object[] strs = new String[expectedCount];
                     Arrays.fill(strs, "tmp");
                     try {
-                        String.format(Locale.ROOT, value, strs);
+                        String.format(value, strs);
                     } catch (Exception ex) {
                         sb.append(tr.getLocale()).append(" - error ").append(ex.getMessage()).append("in ").
                                 append(enEntry.getKey()).append("->").
@@ -191,15 +189,15 @@ public class TranslationMap {
 
         @Override
         public String tr(String key, Object... params) {
-            String val = map.get(toLowerCase(key));
-            if (isEmpty(val))
+            String val = map.get(key.toLowerCase());
+            if (Helper.isEmpty(val))
                 return key;
 
-            return String.format(Locale.ROOT, val, params);
+            return String.format(val, params);
         }
 
         public TranslationHashMap put(String key, String val) {
-            String existing = map.put(toLowerCase(key), val);
+            String existing = map.put(key.toLowerCase(), val);
             if (existing != null)
                 throw new IllegalStateException("Cannot overwrite key " + key + " with " + val + ", was: " + existing);
             return this;
@@ -219,7 +217,7 @@ public class TranslationMap {
             if (is == null)
                 throw new IllegalStateException("No input stream found in class path!?");
             try {
-                for (String line : readFile(new InputStreamReader(is, UTF_CS))) {
+                for (String line : Helper.readFile(new InputStreamReader(is, Helper.UTF_CS))) {
                     if (line.isEmpty() || line.startsWith("//") || line.startsWith("#"))
                         continue;
 

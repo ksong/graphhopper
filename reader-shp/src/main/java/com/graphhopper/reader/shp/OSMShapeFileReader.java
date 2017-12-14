@@ -42,8 +42,6 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 
-import static com.graphhopper.util.Helper.*;
-
 /**
  * OSMShapeFileReader for files present at : http://download.geofabrik.de/ It
  * extracts the data as per the structure of shape files
@@ -58,7 +56,7 @@ public class OSMShapeFileReader extends ShapeFileReader {
     private static final String[] DIRECT_COPY_TAGS = new String[]{"name"};
     private File roadsFile;
     private final GHObjectIntHashMap<Coordinate> coordState = new GHObjectIntHashMap<>(1000, 0.7f);
-    private final DistanceCalc distCalc = DIST_EARTH;
+    private final DistanceCalc distCalc = Helper.DIST_EARTH;
     private static final Logger LOGGER = LoggerFactory.getLogger(OSMShapeFileReader.class);
     private final HashSet<EdgeAddedListener> edgeAddedListeners = new HashSet<>();
     private int nextNodeId = FIRST_NODE_ID;
@@ -301,7 +299,7 @@ public class OSMShapeFileReader extends ShapeFileReader {
             // shapefile.
             // We map back to the standard convention so that tag can be dealt
             // with correctly by the flag encoder.
-            String val = toLowerCase(oneway.toString().trim());
+            String val = oneway.toString().trim().toLowerCase();
             if (val.equals("b")) {
                 // both ways
                 val = "no";

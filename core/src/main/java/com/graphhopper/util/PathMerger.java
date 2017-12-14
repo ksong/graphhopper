@@ -48,7 +48,6 @@ public class PathMerger {
     private boolean calcPoints = true;
     private PathDetailsBuilderFactory pathBuilderFactory;
     private List<String> requestedPathDetails = Collections.EMPTY_LIST;
-    private double favoredHeading = Double.NaN;
 
     public PathMerger setCalcPoints(boolean calcPoints) {
         this.calcPoints = calcPoints;
@@ -88,10 +87,6 @@ public class PathMerger {
         List<String> description = new ArrayList<>();
         for (int pathIndex = 0; pathIndex < paths.size(); pathIndex++) {
             Path path = paths.get(pathIndex);
-            if (!path.isFound()) {
-                allFound = false;
-                continue;
-            }
             description.addAll(path.getDescription());
             fullTimeInMillis += path.getTime();
             fullDistance += path.getDistance();
@@ -136,10 +131,8 @@ public class PathMerger {
                 calcAscendDescend(altRsp, fullPoints);
         }
 
-        if (enableInstructions) {
-            fullInstructions = updateInstructionsWithContext(fullInstructions);
+        if (enableInstructions)
             altRsp.setInstructions(fullInstructions);
-        }
 
         if (!allFound) {
             altRsp.addError(new ConnectionNotFoundException("Connection between locations not found", Collections.<String, Object>emptyMap()));
@@ -176,51 +169,6 @@ public class PathMerger {
         pathDetails.addAll(otherDetails);
     }
 
-    /**
-     * This method iterates over all instructions and uses the available context to improve the instructions.
-     * If the requests contains a heading, this method can transform the first continue to a u-turn if the heading
-     * points into the opposite direction of the route.
-     * At a waypoint it can transform the continue to a u-turn if the route involves turning.
-     */
-    private InstructionList updateInstructionsWithContext(InstructionList instructions) {
-        Instruction instruction;
-        Instruction nextInstruction;
-
-        for (int i = 0; i < instructions.size() - 1; i++) {
-            instruction = instructions.get(i);
-
-            if (i == 0 && !Double.isNaN(favoredHeading) && instruction.extraInfo.containsKey("heading")) {
-                double heading = (double) instruction.extraInfo.get("heading");
-                double diff = Math.abs(heading - favoredHeading) % 360;
-                if (diff > 170 && diff < 190) {
-                    // The requested heading points into the opposite direction of the calculated heading
-                    // therefore we change the continue instruction to a u-turn
-                    instruction.setSign(Instruction.U_TURN_UNKNOWN);
-                }
-            }
-
-            if (instruction.getSign() == Instruction.REACHED_VIA) {
-                nextInstruction = instructions.get(i + 1);
-                if (nextInstruction.getSign() != Instruction.CONTINUE_ON_STREET
-                        || !instruction.extraInfo.containsKey("last_heading")
-                        || !nextInstruction.extraInfo.containsKey("heading")) {
-                    // TODO throw exception?
-                    continue;
-                }
-                double lastHeading = (double) instruction.extraInfo.get("last_heading");
-                double heading = (double) nextInstruction.extraInfo.get("heading");
-
-                // Since it's supposed to go back the same edge, we can be very strict with the diff
-                double diff = Math.abs(lastHeading - heading) % 360;
-                if (diff > 179 && diff < 181) {
-                    nextInstruction.setSign(Instruction.U_TURN_UNKNOWN);
-                }
-            }
-        }
-
-        return instructions;
-    }
-
     private void calcAscendDescend(final PathWrapper rsp, final PointList pointList) {
         double ascendMeters = 0;
         double descendMeters = 0;
@@ -239,9 +187,5 @@ public class PathMerger {
         }
         rsp.setAscend(ascendMeters);
         rsp.setDescend(descendMeters);
-    }
-
-    public void setFavoredHeading(double favoredHeading) {
-        this.favoredHeading = favoredHeading;
     }
 }

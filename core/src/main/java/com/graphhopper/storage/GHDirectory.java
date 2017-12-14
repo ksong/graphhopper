@@ -25,8 +25,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.graphhopper.util.Helper.*;
-
 /**
  * Implements some common methods for the subclasses.
  * <p>
@@ -42,7 +40,7 @@ public class GHDirectory implements Directory {
 
     public GHDirectory(String _location, DAType defaultType) {
         this.defaultType = defaultType;
-        if (isEmpty(_location))
+        if (Helper.isEmpty(_location))
             _location = new File("").getAbsolutePath();
 
         if (!_location.endsWith("/"))
@@ -74,7 +72,7 @@ public class GHDirectory implements Directory {
     }
 
     public Directory put(String name, DAType type) {
-        if (!name.equals(toLowerCase(name)))
+        if (!name.equals(name.toLowerCase()))
             throw new IllegalArgumentException("Since 0.7 DataAccess objects does no longer accept upper case names");
 
         types.put(name, type);
@@ -92,7 +90,7 @@ public class GHDirectory implements Directory {
 
     @Override
     public DataAccess find(String name, DAType type) {
-        if (!name.equals(toLowerCase(name)))
+        if (!name.equals(name.toLowerCase()))
             throw new IllegalArgumentException("Since 0.7 DataAccess objects does no longer accept upper case names");
 
         DataAccess da = map.get(name);
@@ -137,7 +135,7 @@ public class GHDirectory implements Directory {
             removeDA(da, da.getName(), false);
         }
         if (mmapDA != null)
-            cleanHack();
+            Helper.cleanHack();
         map.clear();
     }
 
@@ -154,7 +152,7 @@ public class GHDirectory implements Directory {
             da.close();
 
         if (da.getType().isStoring())
-            removeDir(new File(location + name));
+            Helper.removeDir(new File(location + name));
     }
 
     void removeFromMap(String name) {

@@ -20,13 +20,7 @@ package com.graphhopper.reader.gtfs;
 
 import com.carrotsearch.hppc.IntArrayList;
 import com.conveyal.gtfs.GTFSFeed;
-import com.conveyal.gtfs.model.Frequency;
-import com.conveyal.gtfs.model.Route;
-import com.conveyal.gtfs.model.Service;
-import com.conveyal.gtfs.model.Stop;
-import com.conveyal.gtfs.model.StopTime;
-import com.conveyal.gtfs.model.Transfer;
-import com.conveyal.gtfs.model.Trip;
+import com.conveyal.gtfs.model.*;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
 import com.google.transit.realtime.GtfsRealtime;
@@ -45,20 +39,9 @@ import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableSet;
-import java.util.Optional;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.conveyal.gtfs.model.Entity.Writer.convertToGtfsTime;
 import static java.time.temporal.ChronoUnit.DAYS;
 
 class GtfsReader {
@@ -67,14 +50,14 @@ class GtfsReader {
     private LocalDate endDate;
 
     static class TripWithStopTimes {
-        public TripWithStopTimes(Trip trip, List<StopTime> stopTimes, BitSet validOnDay) {
+        public TripWithStopTimes(Trip trip, Iterable<StopTime> stopTimes, BitSet validOnDay) {
             this.trip = trip;
             this.stopTimes = stopTimes;
             this.validOnDay = validOnDay;
         }
 
         Trip trip;
-        List<StopTime> stopTimes;
+        Iterable<StopTime> stopTimes;
         BitSet validOnDay;
     }
 
@@ -139,10 +122,10 @@ class GtfsReader {
         this.i = graph.getNodes();
         this.startDate = feed.calculateStats().getStartDate();
         this.endDate = feed.calculateStats().getEndDate();
+        this.gtfsStorage.getFares().putAll(feed.fares);
     }
 
     void readGraph() {
-        gtfsStorage.getFares().putAll(feed.fares);
         buildPtNetwork();
         connectStopsToStreetNetwork();
         connectStopsToStationNodes();
@@ -201,9 +184,7 @@ class GtfsReader {
                                 validOnDay.set((int) DAYS.between(startDate, date));
                             }
                         }
-                        ArrayList<StopTime> stopTimes = new ArrayList<>();
-                        getInterpolatedStopTimesForTrip(trip.trip_id).forEach(stopTimes::add);
-                        return new TripWithStopTimes(trip, stopTimes, validOnDay);
+                        return new TripWithStopTimes(trip, getInterpolatedStopTimesForTrip(trip.trip_id), validOnDay);
                     })
                     .sorted(Comparator.comparingInt(trip -> trip.stopTimes.iterator().next().departure_time))
                     .collect(Collectors.toList());
@@ -268,10 +249,6 @@ class GtfsReader {
     void addTrips(ZoneId zoneId, List<TripWithStopTimes> trips, int time) {
         List<Integer> arrivalNodes = new ArrayList<>();
         for (TripWithStopTimes trip : trips) {
-            GtfsRealtime.TripDescriptor tripDescriptor = GtfsRealtime.TripDescriptor.newBuilder()
-                    .setTripId(trip.trip.trip_id)
-                    .setStartTime(convertToGtfsTime(time)).build();
-
             IntArrayList boardEdges = new IntArrayList();
             IntArrayList alightEdges = new IntArrayList();
             StopTime prev = null;
@@ -333,7 +310,7 @@ class GtfsReader {
                 setEdgeType(boardEdge, GtfsStorage.EdgeType.BOARD);
                 boardEdges.add(boardEdge.getEdge());
                 gtfsStorage.getStopSequences().put(boardEdge.getEdge(), stopTime.stop_sequence);
-                gtfsStorage.getTripDescriptors().put(boardEdge.getEdge(), tripDescriptor.toByteArray());
+                gtfsStorage.getExtraStrings().put(boardEdge.getEdge(), trip.trip.trip_id);
                 boardEdge.setFlags(encoder.setValidityId(boardEdge.getFlags(), validityId));
                 boardEdge.setFlags(encoder.setTransfers(boardEdge.getFlags(), 1));
 
@@ -346,7 +323,7 @@ class GtfsReader {
                 setEdgeType(alightEdge, GtfsStorage.EdgeType.ALIGHT);
                 alightEdges.add(alightEdge.getEdge());
                 gtfsStorage.getStopSequences().put(alightEdge.getEdge(), stopTime.stop_sequence);
-                gtfsStorage.getTripDescriptors().put(alightEdge.getEdge(), tripDescriptor.toByteArray());
+                gtfsStorage.getExtraStrings().put(alightEdge.getEdge(), trip.trip.trip_id);
                 alightEdge.setFlags(encoder.setValidityId(alightEdge.getFlags(), validityId));
 //                            alightEdge.setFlags(encoder.setTransfers(alightEdge.getFlags(), 1));
 
@@ -360,10 +337,11 @@ class GtfsReader {
                 setEdgeType(dwellEdge, GtfsStorage.EdgeType.DWELL);
                 dwellEdge.setFlags(encoder.setTime(dwellEdge.getFlags(), stopTime.departure_time - stopTime.arrival_time));
                 if (prev == null) {
-                    insertInboundBlockTransfers(arrivalNodes, tripDescriptor, departureNode, stopTime, stop, validityId);
+                    insertInboundBlockTransfers(arrivalNodes, trip.trip, departureNode, stopTime, stop, validityId);
                 }
                 prev = stopTime;
             }
+            final GtfsRealtime.TripDescriptor tripDescriptor = GtfsRealtime.TripDescriptor.newBuilder().setTripId(trip.trip.trip_id).setStartTime(Entity.Writer.convertToGtfsTime(time)).build();
             gtfsStorage.getBoardEdgesForTrip().put(tripDescriptor, boardEdges.toArray());
             gtfsStorage.getAlightEdgesForTrip().put(tripDescriptor, alightEdges.toArray());
             arrivalNodes.add(arrivalNode);
@@ -437,7 +415,7 @@ class GtfsReader {
         });
     }
 
-    private void insertInboundBlockTransfers(List<Integer> arrivalNodes, GtfsRealtime.TripDescriptor tripDescriptor, int departureNode, StopTime stopTime, Stop stop, int validityId) {
+    private void insertInboundBlockTransfers(List<Integer> arrivalNodes, Trip trip, int departureNode, StopTime stopTime, Stop stop, int validityId) {
         EdgeIteratorState edge;
         for (int lastTripArrivalNode : arrivalNodes) {
             int dwellTime = times.get(departureNode) - times.get(lastTripArrivalNode);
@@ -461,7 +439,7 @@ class GtfsReader {
                 setEdgeType(edge, GtfsStorage.EdgeType.BOARD);
                 edge.setFlags(encoder.setValidityId(edge.getFlags(), validityId));
                 gtfsStorage.getStopSequences().put(edge.getEdge(), stopTime.stop_sequence);
-                gtfsStorage.getTripDescriptors().put(edge.getEdge(), tripDescriptor.toByteArray());
+                gtfsStorage.getExtraStrings().put(edge.getEdge(), trip.trip_id);
             }
         }
     }

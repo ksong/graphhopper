@@ -44,8 +44,6 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.graphhopper.util.Helper.*;
-
 /**
  * This class implements the A*, landmark and triangulation (ALT) decorator.
  *
@@ -150,7 +148,7 @@ public class LMAlgoFactoryDecorator implements RoutingAlgorithmFactoryDecorator 
 
         weightingsAsStrings.clear();
         for (String strWeighting : weightingList) {
-            strWeighting = toLowerCase(strWeighting);
+            strWeighting = strWeighting.toLowerCase();
             strWeighting = strWeighting.trim();
             addWeighting(strWeighting);
         }
@@ -284,11 +282,11 @@ public class LMAlgoFactoryDecorator implements RoutingAlgorithmFactoryDecorator 
                     if (plm.loadExisting())
                         return;
 
-                    LOGGER.info(tmpCounter + "/" + getPreparations().size() + " calling LM prepare.doWork for " + plm.getWeighting() + " ... (" + getMemInfo() + ")");
+                    LOGGER.info(tmpCounter + "/" + getPreparations().size() + " calling LM prepare.doWork for " + plm.getWeighting() + " ... (" + Helper.getMemInfo() + ")");
                     prepared.set(true);
                     Thread.currentThread().setName(name);
                     plm.doWork();
-                    properties.put(Landmark.PREPARE + "date." + name, createFormatter().format(new Date()));
+                    properties.put(Landmark.PREPARE + "date." + name, Helper.createFormatter().format(new Date()));
                 }
             }, name);
         }

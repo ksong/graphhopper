@@ -10,4 +10,7 @@ services:
             JAVA_OPTS: "-server -Xconcurrentio -Xmx1g -Xms1g -XX:+UseG1GC -XX:MetaspaceSize=100M"
         ports:
             - "11111:11111"
-        command: /data/europe_germany_berlin.pbf
+        entrypoint:
+            - ./graphhopper.sh
+            - web
+            - ../data/europe_germany_berlin.pbf

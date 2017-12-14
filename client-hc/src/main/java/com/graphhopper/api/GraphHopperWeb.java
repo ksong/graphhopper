@@ -37,8 +37,6 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-import static com.graphhopper.util.Helper.*;
-
 /**
  * Main wrapper of the GraphHopper Directions API for a simple and efficient
  * usage.
@@ -176,11 +174,6 @@ public class GraphHopperWeb implements GraphHopperAPI {
                         instr = new FinishInstruction(text, instPL, 0);
                     } else {
                         instr = new Instruction(sign, text, ia, instPL);
-                        if(sign == Instruction.CONTINUE_ON_STREET){
-                            if(jsonObj.has("heading")){
-                                instr.setExtraInfo("heading", jsonObj.get("heading").asDouble());
-                            }
-                        }
                     }
 
                     // Usually, the translation is done from the routing service so just use the provided string
@@ -414,7 +407,7 @@ public class GraphHopperWeb implements GraphHopperAPI {
 
         String places = "";
         for (GHPoint p : request.getPoints()) {
-            places += "point=" + round6(p.lat) + "," + round6(p.lon) + "&";
+            places += "point=" + Helper.round6(p.lat) + "," + Helper.round6(p.lon) + "&";
         }
 
         String type = request.getHints().get("type", "json");
@@ -448,7 +441,7 @@ public class GraphHopperWeb implements GraphHopperAPI {
             String urlValue = entry.getValue();
 
             // use lower case conversion for check only!
-            if (ignoreSet.contains(toLowerCase(urlKey))) {
+            if (ignoreSet.contains(urlKey.toLowerCase())) {
                 continue;
             }
 

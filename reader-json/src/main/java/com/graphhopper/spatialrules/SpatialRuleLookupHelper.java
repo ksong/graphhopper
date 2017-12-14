@@ -12,16 +12,15 @@ import com.graphhopper.routing.util.spatialrules.SpatialRuleLookup;
 import com.graphhopper.routing.util.spatialrules.SpatialRuleLookupBuilder;
 import com.graphhopper.util.CmdArgs;
 import com.graphhopper.util.PMap;
+import com.graphhopper.util.Parameters;
 import com.graphhopper.util.shapes.BBox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
-
-import static com.graphhopper.util.Helper.UTF_CS;
 
 /**
  * Helper class to build the spatial rule index
@@ -37,7 +36,7 @@ public class SpatialRuleLookupHelper {
         if (!spatialRuleLocation.isEmpty()) {
             try {
                 final BBox maxBounds = BBox.parseBBoxString(args.get("spatial_rules.max_bbox", "-180, 180, -90, 90"));
-                final InputStreamReader reader = new InputStreamReader(new FileInputStream(spatialRuleLocation), UTF_CS);
+                final FileReader reader = new FileReader(spatialRuleLocation);
                 final SpatialRuleLookup index = SpatialRuleLookupBuilder.buildIndex(new GHJsonFactory().create().fromJson(reader, JsonFeatureCollection.class), "ISO_A3", new CountriesSpatialRuleFactory(), .1, maxBounds);
                 logger.info("Set spatial rule lookup with " + index.size() + " rules");
                 final FlagEncoderFactory oldFEF = graphHopper.getFlagEncoderFactory();
@@ -59,7 +58,7 @@ public class SpatialRuleLookupHelper {
 
     public static JsonFeatureCollection createLandmarkSplittingFeatureCollection(String location) {
         try {
-            Reader reader = location.isEmpty() ? new InputStreamReader(LandmarkStorage.class.getResource("map.geo.json").openStream(), UTF_CS) : new InputStreamReader(new FileInputStream(location), UTF_CS);
+            Reader reader = location.isEmpty() ? new InputStreamReader(LandmarkStorage.class.getResource("map.geo.json").openStream()) : new FileReader(location);
             return new GHJsonFactory().create().fromJson(reader, JsonFeatureCollection.class);
         } catch (IOException e) {
             logger.error("Problem while reading border map GeoJSON. Skipping this.", e);
