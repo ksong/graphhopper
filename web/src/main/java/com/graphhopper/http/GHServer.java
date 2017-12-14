@@ -70,20 +70,21 @@ public class GHServer {
         this.injector = injector;
         ResourceHandler resHandler = new ResourceHandler();
         resHandler.setDirectoriesListed(false);
-        resHandler.setWelcomeFiles(new String[]{"index.html"});
+        resHandler.setWelcomeFiles(new String[]{
+                "index.html"
+        });
         resHandler.setRedirectWelcome(false);
 
-        String contextPath = args.get("jetty.contextpath", "/");
         ContextHandler contextHandler = new ContextHandler();
-        contextHandler.setErrorHandler(new GHErrorHandler());
-        contextHandler.setContextPath(contextPath);
+        contextHandler.setContextPath("/");
         contextHandler.setBaseResource(Resource.newResource(args.get("jetty.resourcebase", "./web/src/main/webapp")));
         contextHandler.setHandler(resHandler);
 
         server = new Server();
         // getSessionHandler and getSecurityHandler should always return null
         ServletContextHandler servHandler = new ServletContextHandler(ServletContextHandler.NO_SECURITY | ServletContextHandler.NO_SESSIONS);
-        servHandler.setContextPath(contextPath);
+        servHandler.setErrorHandler(new GHErrorHandler());
+        servHandler.setContextPath("/");
 
         // Putting this here (and not in the guice servlet module) because it should take precedence
         // over more specific routes. And guice, strangely, is order-dependent (even though, except in the servlet
