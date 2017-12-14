@@ -36,27 +36,21 @@ public class HeightTile {
     private final int minLat;
     private final int minLon;
     private final int width;
-    private final int height;
-    private final int horizontalDegree;
-    private final int verticalDegree;
+    private final int degree;
     private final double lowerBound;
-    private final double lonHigherBound;
-    private final double latHigherBound;
+    private final double higherBound;
     private DataAccess heights;
     private boolean calcMean;
 
-    public HeightTile(int minLat, int minLon, int width, int height, double precision, int horizontalDegree, int verticalDegree) {
+    public HeightTile(int minLat, int minLon, int width, double precision, int degree) {
         this.minLat = minLat;
         this.minLon = minLon;
         this.width = width;
-        this.height = height;
 
         this.lowerBound = -1 / precision;
-        this.lonHigherBound = horizontalDegree + 1 / precision;
-        this.latHigherBound = verticalDegree + 1 / precision;
+        this.higherBound = degree + 1 / precision;
 
-        this.horizontalDegree = horizontalDegree;
-        this.verticalDegree = verticalDegree;
+        this.degree = degree;
     }
 
     public HeightTile setCalcMean(boolean b) {
@@ -80,18 +74,18 @@ public class HeightTile {
     public double getHeight(double lat, double lon) {
         double deltaLat = Math.abs(lat - minLat);
         double deltaLon = Math.abs(lon - minLon);
-        if (deltaLat > latHigherBound || deltaLat < lowerBound)
+        if (deltaLat > higherBound || deltaLat < lowerBound)
             throw new IllegalStateException("latitude not in boundary of this file:" + lat + "," + lon + ", this:" + this.toString());
-        if (deltaLon > lonHigherBound || deltaLon < lowerBound)
+        if (deltaLon > higherBound || deltaLon < lowerBound)
             throw new IllegalStateException("longitude not in boundary of this file:" + lat + "," + lon + ", this:" + this.toString());
 
         // first row in the file is the northernmost one
         // http://gis.stackexchange.com/a/43756/9006
-        int lonSimilar = (int) (width / horizontalDegree * deltaLon);
+        int lonSimilar = (int) (width / degree * deltaLon);
         // different fallback methods for lat and lon as we have different rounding (lon -> positive, lat -> negative)
         if (lonSimilar >= width)
             lonSimilar = width - 1;
-        int latSimilar = height - 1 - (int) (height / verticalDegree * deltaLat);
+        int latSimilar = width - 1 - (int) (width / degree * deltaLat);
         if (latSimilar < 0)
             latSimilar = 0;
 
@@ -112,7 +106,7 @@ public class HeightTile {
             if (latSimilar > 0)
                 value += includePoint(daPointer - 2 * width, counter);
 
-            if (latSimilar < height - 1)
+            if (latSimilar < width - 1)
                 value += includePoint(daPointer + 2 * width, counter);
         }
 
@@ -133,13 +127,14 @@ public class HeightTile {
     }
 
     protected BufferedImage makeARGB() {
+        int height = width;
         BufferedImage argbImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         Graphics g = argbImage.getGraphics();
-        long len = width * height;
+        long len = width * width;
         for (int i = 0; i < len; i++) {
             int lonSimilar = i % width;
             // no need for width - y as coordinate system for Graphics is already this way
-            int latSimilar = i / height;
+            int latSimilar = i / width;
             int green = Math.abs(heights.getShort(i * 2));
             if (green == 0) {
                 g.setColor(new Color(255, 0, 0, 255));
@@ -159,7 +154,8 @@ public class HeightTile {
         return argbImage;
     }
 
-    public BufferedImage getImageFromArray(int[] pixels, int width, int height) {
+    public BufferedImage getImageFromArray(int[] pixels, int width) {
+        int height = width;
         BufferedImage tmpImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB_PRE);
         tmpImage.setRGB(0, 0, width, height, pixels, 0, width);
         return tmpImage;
